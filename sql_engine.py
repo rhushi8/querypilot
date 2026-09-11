@@ -63,7 +63,7 @@ def _format_history(history) -> str:
     """Render recent (question, sql) turns so the model can resolve follow-ups."""
     if not history:
         return ""
-    lines = ["\nConversation so far (oldest first) — use it to resolve follow-up questions:"]
+    lines = ["\nConversation so far (oldest first), use it to resolve follow-up questions:"]
     for turn in history:
         lines.append(f"Q: {turn['question']}\nSQL: {turn['sql']}")
     return "\n".join(lines) + "\n"

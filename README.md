@@ -1,52 +1,92 @@
 # SQL Analytics Assistant
 
-Ask a business question in plain English and get back a validated SQL query, an automatic chart, a plain-English explanation, and a short business insight — without writing any SQL.
+Ask a database a question in plain English. Get back the SQL it wrote, a chart,
+an explanation of what the query does, and a one-line business takeaway.
 
-## Problem Statement
-Most business users who need answers from a database can't write SQL, leaving them dependent on technical teams for routine questions. Bridging that gap with an LLM is risky on its own: left unconstrained, it hallucinates table and column names and can produce unsafe or destructive queries. The problem this project addresses: let non-technical users query data in plain English while guaranteeing that every executed query is valid, read-only, and safe.
+## Why
 
-## Key features
-- **Natural language → SQL** with schema-aware prompting (real table and column names supplied as context).
-- **Self-correcting generation** — if a generated query fails (e.g. a hallucinated column), the SQLite error is fed back to the LLM for a single corrective retry before giving up.
-- **Conversational memory** — recent question/SQL turns are passed as context so follow-up questions ("now break that down by month") resolve correctly.
-- **Safety guardrails** — SELECT-only (and CTEs), destructive keywords blocked on word boundaries, and stacked/multiple statements rejected *before* execution.
-- **Automatic visualization** — chart chosen by result shape: 1 numeric column → histogram, 1 category + metric → bar chart, 2 categories + metric → grouped bar.
-- **Explainability** — explains the generated SQL in plain English and turns the result into a business insight, degrading gracefully if the LLM is unavailable.
+Most people who need answers from a database can't write SQL, so they wait on
+someone who can. Handing the job to an LLM on its own is worse, because left
+unconstrained it invents table names, invents column names, and will cheerfully
+write a DELETE. The aim here is to keep the question in English while
+guaranteeing that whatever actually runs is valid, read-only and safe.
+
+## What it does
+
+Generation is schema-aware. The real table and column names go into the prompt
+as context, so the model isn't guessing at them.
+
+If a query fails, the SQLite error goes back to the model for one corrective
+retry before giving up. A hallucinated column name usually survives that round
+trip.
+
+Recent question and SQL turns are kept as context, so a follow-up like "now
+break that down by month" resolves against what you just asked.
+
+Validation happens before execution, not after. SELECT and CTEs only.
+Destructive keywords are matched on word boundaries, so a column called
+`updated_at` is fine while a `DROP` is not, and stacked statements are rejected
+outright.
+
+Charts are chosen by the shape of the result: one numeric column gives a
+histogram, a category plus a metric gives a bar chart, two categories plus a
+metric gives a grouped bar.
+
+The plain-English explanation and the business insight both degrade gracefully
+if the LLM is unavailable.
 
 ## How it works
-```
-plain-English question → schema-aware SQL generation → validation (SELECT-only) → execute on SQLite → (on error: one LLM repair attempt) → auto-visualize + explain + insight
-```
-SQL generation, validation, and repair live in `sql_engine.py`, independent of the UI so they can be unit-tested without Streamlit or a live LLM.
 
-## Tech stack
-Python · Streamlit · SQLite · Pandas · Plotly · SQLParse · Ollama / CodeLlama (local LLM)
+```
+question → schema-aware SQL generation → validation (SELECT-only) → run on SQLite
+         → on error, one repair attempt → chart + explanation + insight
+```
+
+Generation, validation and repair all live in `sql_engine.py`, away from the
+UI, so they can be unit-tested without Streamlit or a running LLM.
+
+## Stack
+
+Python, Streamlit, SQLite, pandas, Plotly, sqlparse, and Ollama running
+CodeLlama locally.
 
 ## Quickstart
+
 ```bash
 python -m venv venv
-venv\Scripts\activate               # Windows
+venv\Scripts\activate
 pip install -r requirements.txt
-python database_setup.py            # builds the sample SQLite database (database.db)
+python database_setup.py            # builds the sample SQLite database
 streamlit run app.py
 ```
-Requires a local Ollama model (e.g. CodeLlama) running for SQL generation.
+
+SQL generation needs a local Ollama model running, CodeLlama for example.
 
 ## Tests
+
 ```bash
 pip install -r requirements-dev.txt
 pytest
 ```
-Covers the SQL validator guardrails and the generation/validation/repair engine using a stub LLM and in-memory SQLite — no Ollama required.
 
-## Project structure
-- `app.py` — Streamlit interface
-- `sql_engine.py` — SQL generation, validation, and one-shot repair (UI-independent, tested)
-- `llm.py` — local LLM client (Ollama) with error handling
-- `validator.py` — SQL safety validation
-- `db.py` / `database_setup.py` — database access & sample data
-- `database.db` — sample SQLite database (runs out of the box)
+The tests cover the validator guardrails and the generate/validate/repair engine
+using a stub LLM and an in-memory SQLite database, so Ollama isn't needed to run
+them.
+
+## Layout
+
+```
+app.py               streamlit interface
+sql_engine.py        generation, validation, one-shot repair (UI-free, tested)
+llm.py               local Ollama client with error handling
+validator.py         SQL safety checks
+db.py                database access
+database_setup.py    builds the sample data
+database.db          sample database, so the repo runs as cloned
+```
 
 ## Example
-**Ask:** "For each region, show total revenue for January."
-→ generates the JOIN + GROUP BY query, runs it, renders a bar chart, explains the SQL in plain English, and summarizes the business takeaway.
+
+Ask "for each region, show total revenue for January" and it writes the JOIN and
+GROUP BY, runs it, draws a bar chart, explains the SQL in English, and
+summarises what the numbers say.
