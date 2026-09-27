@@ -1,7 +1,3 @@
-"""SQL generation, validation, and one-shot repair.
-
-UI-independent so it can be unit-tested without Streamlit or a live LLM.
-"""
 import re
 from typing import Callable, NamedTuple, Optional
 
@@ -50,7 +46,6 @@ class SQLOutcome(NamedTuple):
 
 
 def strip_sql_fences(text: str) -> str:
-    """Remove markdown code fences / stray labels the LLM may wrap SQL in."""
     cleaned = text.strip()
     fence = re.match(r"^```[a-zA-Z]*\s*(.*?)\s*```$", cleaned, flags=re.DOTALL)
     if fence:
@@ -60,7 +55,6 @@ def strip_sql_fences(text: str) -> str:
 
 
 def _format_history(history) -> str:
-    """Render recent (question, sql) turns so the model can resolve follow-ups."""
     if not history:
         return ""
     lines = ["\nConversation so far (oldest first), use it to resolve follow-up questions:"]
@@ -86,12 +80,7 @@ def generate_validated_sql(
     history=None,
     max_repairs: int = 1,
 ) -> SQLOutcome:
-    """Generate SQL, validate it, execute it, and repair once on a DB error.
-
-    A hallucinated table/column surfaces as a SQLite error, which is fed back to
-    the LLM for a single corrective retry before giving up. `history` is a list
-    of prior {"question", "sql"} turns used as conversational context.
-    """
+    """DB errors go back to the LLM for one repair attempt."""
     prior_sql = prior_error = None
     for _ in range(max_repairs + 1):
         prompt = build_prompt(query, schema_info, history, prior_sql, prior_error)

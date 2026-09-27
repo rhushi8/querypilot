@@ -1,8 +1,3 @@
-#Responsibility:
-#Talk to Ollama
-#Handle temperature
-#Centralize model logic
-
 import requests
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
@@ -10,7 +5,7 @@ MODEL_NAME = "codellama:13b"
 
 
 class LLMError(RuntimeError):
-    """Raised when the local LLM is unreachable or returns an unexpected response."""
+    """LLM unreachable or bad response."""
 
 
 def query_llm(prompt, temperature=0):

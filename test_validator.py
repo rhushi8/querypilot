@@ -12,7 +12,7 @@ def test_cte_with_is_allowed():
 
 
 def test_column_named_like_keyword_is_not_blocked():
-    # Regression: 'updated_at' previously tripped the UPDATE substring check.
+    # Regression: updated_at used to trip the UPDATE check.
     for col in ["updated_at", "deleted_flag", "insert_date", "altered_by"]:
         ok, msg = validate_sql(f"SELECT {col} FROM customers")
         assert ok, f"{col} should be allowed, got: {msg}"

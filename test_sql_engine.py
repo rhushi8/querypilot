@@ -18,7 +18,6 @@ def conn():
 
 
 def make_llm(responses):
-    """Return a stub llm() that yields queued responses and records calls/prompts."""
     calls = {"n": 0}
     prompts = []
 
@@ -66,12 +65,11 @@ def test_destructive_sql_is_rejected_without_execution(conn):
     llm = make_llm(["DROP TABLE sales"])
     outcome = generate_validated_sql("delete everything", "schema", conn, llm=llm)
     assert outcome.dataframe is None
-    assert "SELECT" in outcome.error  # validator message
-    assert llm.calls["n"] == 1  # never retried, never executed
+    assert "SELECT" in outcome.error
+    assert llm.calls["n"] == 1
 
 
 def test_repair_loop_fixes_hallucinated_column(conn):
-    # First response references a non-existent column; second is corrected.
     llm = make_llm(
         [
             "SELECT nonexistent_col FROM sales",
@@ -81,15 +79,15 @@ def test_repair_loop_fixes_hallucinated_column(conn):
     outcome = generate_validated_sql("regions", "schema", conn, llm=llm)
     assert outcome.error is None
     assert outcome.dataframe is not None
-    assert llm.calls["n"] == 2  # one repair attempt used
+    assert llm.calls["n"] == 2
 
 
 def test_repair_exhausted_returns_error(conn):
-    llm = make_llm(["SELECT bad FROM sales"])  # always bad
+    llm = make_llm(["SELECT bad FROM sales"])
     outcome = generate_validated_sql("x", "schema", conn, llm=llm, max_repairs=1)
     assert outcome.dataframe is None
     assert "repair" in outcome.error.lower()
-    assert llm.calls["n"] == 2  # initial + 1 repair
+    assert llm.calls["n"] == 2
 
 
 def test_build_prompt_without_history_has_no_conversation_block():
@@ -103,4 +101,4 @@ def test_history_is_included_in_prompt(conn):
     generate_validated_sql("now just the regions", "schema", conn, llm=llm, history=history)
     sent = llm.prompts[0]
     assert "Conversation so far" in sent
-    assert "revenue by region" in sent  # prior question threaded in for follow-ups
+    assert "revenue by region" in sent

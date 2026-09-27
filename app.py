@@ -11,13 +11,11 @@ from sql_engine import generate_validated_sql
 
 st.set_page_config(page_title="SQL Analytics Assistant", page_icon="📊", layout="wide")
 
-# Session state
 if "history" not in st.session_state:
     st.session_state.history = []
 if "suggested_query" not in st.session_state:
     st.session_state.suggested_query = ""
 
-# Database (default, or user-uploaded SQLite file)
 st.sidebar.header("📂 Database")
 uploaded_db = st.sidebar.file_uploader("Upload SQLite Database (.db)", type=["db"])
 
@@ -77,7 +75,6 @@ def render_chart(df):
 
 
 def explain(label, prompt):
-    """Run an auxiliary LLM call, degrading gracefully if the model is down."""
     try:
         return query_llm(prompt, temperature=0.3)
     except LLMError as exc:
@@ -99,7 +96,7 @@ if query:
     try:
         outcome = generate_validated_sql(
             query, schema_info, conn, llm=query_llm,
-            history=st.session_state.history[-3:],  # recent turns for follow-ups
+            history=st.session_state.history[-3:],
         )
     except LLMError as exc:
         st.error(str(exc))

@@ -1,17 +1,15 @@
 import sqlite3
 import random
 
-random.seed(42)  # reproducible demo data
+random.seed(42)
 
 conn = sqlite3.connect("database.db")
 cursor = conn.cursor()
 
-# Drop old tables
 cursor.execute("DROP TABLE IF EXISTS sales")
 cursor.execute("DROP TABLE IF EXISTS customers")
 cursor.execute("DROP TABLE IF EXISTS products")
 
-# Create customers table
 cursor.execute("""
 CREATE TABLE customers (
     customer_id INTEGER PRIMARY KEY,
@@ -20,7 +18,6 @@ CREATE TABLE customers (
 )
 """)
 
-# Create products table
 cursor.execute("""
 CREATE TABLE products (
     product_id INTEGER PRIMARY KEY,
@@ -29,7 +26,6 @@ CREATE TABLE products (
 )
 """)
 
-# Create sales table with foreign keys
 cursor.execute("""
 CREATE TABLE sales (
     sale_id INTEGER PRIMARY KEY,
@@ -42,7 +38,6 @@ CREATE TABLE sales (
 )
 """)
 
-# Insert sample customers
 regions = ["North", "South", "East", "West"]
 customers_data = []
 
@@ -54,7 +49,6 @@ cursor.executemany(
     customers_data
 )
 
-# Insert sample products
 categories = ["Electronics", "Mobile", "Accessories"]
 products_data = []
 
@@ -66,7 +60,6 @@ cursor.executemany(
     products_data
 )
 
-# Insert sales
 months = ["Jan", "Feb", "Mar", "Apr"]
 sales_data = []
 

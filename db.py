@@ -1,7 +1,3 @@
-#Responsibility:
-#Database connection
-#Schema extraction
-
 import sqlite3
 
 
