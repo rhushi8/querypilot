@@ -89,31 +89,42 @@ query = st.text_input("💬 Ask a business question:", value=default_query)
 st.session_state.suggested_query = ""
 
 if query:
-    start_time = time.time()
-    schema_info = get_schema(conn)
+    # Any widget click reruns the script; only a new question should hit the LLM.
+    run_key = (query, uploaded_db.file_id if uploaded_db else None)
+    if st.session_state.get("last_run_key") != run_key:
+        start_time = time.time()
+        try:
+            outcome = generate_validated_sql(
+                query, get_schema(conn), conn, llm=query_llm,
+                history=st.session_state.history[-3:],
+            )
+        except LLMError as exc:
+            st.error(str(exc))
+            st.stop()
 
-    try:
-        outcome = generate_validated_sql(
-            query, schema_info, conn, llm=query_llm,
-            history=st.session_state.history[-3:],
-        )
-    except LLMError as exc:
-        st.error(str(exc))
-        st.stop()
+        if outcome.error:
+            st.error(outcome.error)
+            st.stop()
 
-    if outcome.error:
-        st.error(outcome.error)
-        st.stop()
+        sql_query, result = outcome.sql, outcome.dataframe
+        st.session_state.last_run = {
+            "sql": sql_query,
+            "result": result,
+            "seconds": round(time.time() - start_time, 3),
+            "explanation": explain("Explanation", f"Explain this SQL query clearly:\n{sql_query}"),
+            "insight": explain("Insight", f"Explain this result in business terms:\n{result.to_string()}"),
+        }
+        st.session_state.last_run_key = run_key
+        st.session_state.history.append({"question": query, "sql": sql_query})
 
-    sql_query, result = outcome.sql, outcome.dataframe
-    execution_time = round(time.time() - start_time, 3)
+    run = st.session_state.last_run
+    sql_query, result = run["sql"], run["result"]
     formatted_sql = sqlparse.format(sql_query, reindent=True, keyword_case="upper")
-    st.session_state.history.append({"question": query, "sql": sql_query})
 
     col1, col2, col3 = st.columns(3)
     col1.metric("Rows", result.shape[0])
     col2.metric("Columns", result.shape[1])
-    col3.metric("Execution Time (s)", execution_time)
+    col3.metric("Execution Time (s)", run["seconds"])
     st.divider()
 
     tab1, tab2, tab3, tab4 = st.tabs(
@@ -131,10 +142,10 @@ if query:
         render_chart(result)
 
     with tab3:
-        st.write(explain("Explanation", f"Explain this SQL query clearly:\n{sql_query}"))
+        st.write(run["explanation"])
 
     with tab4:
-        st.write(explain("Insight", f"Explain this result in business terms:\n{result.to_string()}"))
+        st.write(run["insight"])
 
     st.divider()
     st.subheader("💡 Suggested Next Questions")
